@@ -456,4 +456,122 @@
                 keyColors[letter] = 'gray';
             }
 
-            keyBtn.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'bg-green-500', 'bg-yello
+            keyBtn.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'bg-green-500', 'bg-yellow-500', 'bg-gray-600', 'dark:bg-gray-800');
+            keyBtn.classList.add('text-white', 'transition', 'duration-300');
+
+            if (keyColors[letter] === 'green') keyBtn.classList.add('bg-green-500');
+            else if (keyColors[letter] === 'yellow') keyBtn.classList.add('bg-yellow-500');
+            else if (keyColors[letter] === 'gray') keyBtn.classList.add('bg-gray-600', 'dark:bg-gray-800');
+        }
+
+        function showToast(message, duration = 2000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-black text-white px-5 py-3 rounded shadow-lg font-bold text-base toast opacity-0';
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => {
+                    if (container.contains(toast)) container.removeChild(toast);
+                }, 300);
+            }, duration);
+        }
+
+        function showRestartButton() {
+            setTimeout(() => {
+                const container = document.getElementById('toast-container');
+                const btn = document.createElement('button');
+                btn.className = 'mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg pointer-events-auto transition transform hover:scale-105 active:scale-95 text-lg';
+                btn.textContent = 'Main Semula';
+                btn.onclick = resetGame;
+                container.appendChild(btn);
+            }, 1000);
+        }
+
+        function resetGame() {
+            targetWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+            currentRow = 0;
+            currentCol = 0;
+            board = Array.from({ length: 6 }, () => Array(5).fill(''));
+            gameOver = false;
+            keyColors = {};
+            
+            const container = document.getElementById('toast-container');
+            container.innerHTML = ''; 
+            
+            initBoard();
+            initKeyboard();
+        }
+
+        // --- BUTANG KAWALAN UI ---
+        const helpBtn = document.getElementById('help-btn');
+        const helpModal = document.getElementById('help-modal');
+        const closeHelpBtn = document.getElementById('close-help');
+        const startBtn = document.getElementById('start-btn');
+        const soundBtn = document.getElementById('sound-btn');
+        const iconSoundOn = document.getElementById('icon-sound-on');
+        const iconSoundOff = document.getElementById('icon-sound-off');
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) {
+                iconSoundOn.classList.remove('hidden');
+                iconSoundOff.classList.add('hidden');
+                initAudio();
+            } else {
+                iconSoundOn.classList.add('hidden');
+                iconSoundOff.classList.remove('hidden');
+            }
+        }
+
+        soundBtn.addEventListener('click', toggleSound);
+
+        function openModal() {
+            helpModal.classList.remove('hidden');
+            setTimeout(() => {
+                helpModal.classList.remove('opacity-0');
+            }, 10);
+        }
+
+        function closeModal() {
+            helpModal.classList.add('opacity-0');
+            setTimeout(() => {
+                helpModal.classList.add('hidden');
+            }, 300);
+            initAudio(); // Initialize audio when they close the modal
+        }
+
+        helpBtn.addEventListener('click', openModal);
+        closeHelpBtn.addEventListener('click', closeModal);
+        startBtn.addEventListener('click', closeModal);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleKeyPress('ENTER');
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                handleKeyPress('BACKSPACE');
+            } else {
+                const letter = e.key.toUpperCase();
+                if (/^[A-Z]$/.test(letter)) {
+                    handleKeyPress(letter);
+                }
+            }
+        });
+
+        initBoard();
+        initKeyboard();
+
+        setTimeout(openModal, 500);
+
+    </script>
+</body>
+</html>
+
+
