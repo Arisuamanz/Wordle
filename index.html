@@ -1,8 +1,12 @@
+```html
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Meta tag untuk paparan penuh pada peranti mudah alih -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Kurumi - Paparan Video Interaktif</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -10,8 +14,6 @@
 
         :root {
             color-scheme: dark;
-            --accent-pink: #ff5fb8;
-            --accent-purple: #8b5cf6;
             --glass-bg: rgba(9, 11, 24, 0.45);
             --glass-border: rgba(255, 255, 255, 0.12);
         }
@@ -35,7 +37,6 @@
             inset: 0;
         }
 
-        /* Container video dengan overflow hidden untuk crop */
         #video-container {
             position: relative;
             width: 100%;
@@ -45,22 +46,25 @@
 
         .waifu-vid {
             position: absolute;
-            /* Anjakan -75px ke atas untuk crop bahagian atas mengikut permintaan */
             top: -75px; 
             left: 0;
             width: 100%;
-            /* Tambah ketinggian 75px supaya bahagian bawah tidak kosong */
             height: calc(100% + 75px); 
             object-fit: cover;
             object-position: top center;
             pointer-events: none;
-            display: none;
-            z-index: 5;
+            
+            /* Ganti display:none kepada opacity untuk elak kelipan (flicker) gelap */
+            display: block;
+            opacity: 0;
+            z-index: 1;
+            
             filter: saturate(1.05) contrast(1.04);
         }
 
+        /* Video yang sedang aktif */
         .waifu-vid.active {
-            display: block;
+            opacity: 1;
             z-index: 10;
         }
 
@@ -107,7 +111,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Rekabentuk butang statik sepenuhnya tanpa animasi hover atau klik */
+        /* Butang Statik */
         .glass-btn {
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
@@ -137,14 +141,14 @@
     <!-- SKRIN UTAMA -->
     <div id="app-screen" class="hidden h-full w-full flex flex-col relative bg-black overflow-hidden">
         
-        <!-- Bekas Video dengan Crop 75px Atas -->
+        <!-- Bekas Video -->
         <div class="flex-1 relative w-full h-full" id="video-container">
             <video id="video-idle" src="https://res.cloudinary.com/dsqi4tm8x/video/upload/v1779046043/1779042912849_sf2w2s.mp4" class="waifu-vid active" playsinline webkit-playsinline muted loop preload="auto" crossorigin="anonymous"></video>
             <video id="video-fight" src="https://res.cloudinary.com/dsqi4tm8x/video/upload/v1779046045/1779042621899_fhdtse.mp4" class="waifu-vid" playsinline webkit-playsinline muted preload="auto" crossorigin="anonymous"></video>
             <video id="video-greeting" src="https://res.cloudinary.com/dsqi4tm8x/video/upload/v1779046043/1779042897111_bff0ug.mp4" class="waifu-vid" playsinline webkit-playsinline muted preload="auto" crossorigin="anonymous"></video>
         </div>
 
-        <!-- Kawasan Butang (Tanpa sebarang animasi klik atau hover) -->
+        <!-- Kawasan Butang -->
         <div class="absolute bottom-10 left-0 right-0 z-30 flex justify-center gap-4 px-6 pointer-events-auto">
             <button id="btn-fight" class="glass-btn flex-1 max-w-[180px] py-4 rounded-2xl text-sm font-bold tracking-widest uppercase text-pink-400 border border-pink-500/20">
                 ⚔️ Fighting
@@ -173,11 +177,24 @@
         let activeVideoElement = vidIdle;
         let queuedVideoElement = null;
 
+        // Fungsi memanggil Skrin Penuh (Fullscreen)
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+        }
+
         async function startApp() {
             if (appStarted) return;
             startBtnText.innerHTML = `<span class="loader"></span> Memuat...`;
             
             try {
+                // Sedia audio & Pra-muat
                 vidIdle.muted = false;
                 vidFight.muted = false;
                 vidGreeting.muted = false;
@@ -186,6 +203,9 @@
                 
                 vidFight.load();
                 vidGreeting.load();
+
+                // Masuk mod skrin penuh sebaik butang disentuh
+                enterFullscreen();
 
                 appStarted = true;
                 introScreen.classList.add('hidden');
@@ -207,13 +227,16 @@
 
             isPlayingAction = true;
 
-            activeVideoElement.classList.remove('active');
-            targetVideo.classList.add('active');
-
+            // Pastikan video baru dimainkan tepat pada masa
             targetVideo.currentTime = 0;
-            activeVideoElement = targetVideo;
-
-            targetVideo.play().catch(err => {
+            
+            targetVideo.play().then(() => {
+                // Menukar kelas (tunjuk/sembunyi) SAHAJA selepas enjin video mula berjalan
+                // Mengelakkan kelipan secara efektif
+                activeVideoElement.classList.remove('active');
+                targetVideo.classList.add('active');
+                activeVideoElement = targetVideo;
+            }).catch(err => {
                 console.error("Gagal main:", err);
                 resetToIdle();
             });
@@ -222,12 +245,16 @@
         function resetToIdle() {
             isPlayingAction = false;
 
-            activeVideoElement.classList.remove('active');
-            vidIdle.classList.add('active');
-            activeVideoElement = vidIdle;
-
             if (vidIdle.paused) {
-                vidIdle.play().catch(e => console.log(e));
+                vidIdle.play().then(() => {
+                    activeVideoElement.classList.remove('active');
+                    vidIdle.classList.add('active');
+                    activeVideoElement = vidIdle;
+                });
+            } else {
+                activeVideoElement.classList.remove('active');
+                vidIdle.classList.add('active');
+                activeVideoElement = vidIdle;
             }
         }
 
@@ -257,3 +284,6 @@
     </script>
 </body>
 </html>
+
+
+```
